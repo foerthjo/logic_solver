@@ -1,0 +1,25 @@
+{
+  "name": "logic_solver",
+  "version": "1.0.0",
+  "description": "",
+  "main": "build/index.js",
+  "scripts": {
+    "build": "npx tsc",
+    "start": "npx node build/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/foerthjo/logic_solver.git"
+  },
+  "author": "foerthjo",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/foerthjo/logic_solver/issues"
+  },
+  "homepage": "https://github.com/foerthjo/logic_solver#readme",
+  "devDependencies": {
+    "node": "^22.9.0",
+    "typescript": "^5.6.2"
+  }
+}

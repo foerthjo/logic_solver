@@ -1,0 +1,8 @@
+{
+	"include": ["src"],
+	"compilerOptions": {
+		"allowJs": true,
+		"outDir": "build",
+		"lib": ["ES2016", "DOM"]
+	}
+}
