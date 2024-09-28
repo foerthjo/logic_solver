@@ -13,3 +13,7 @@ let implication = new Implication(is, blue, is, cube, 0.9);
 
 let combined = itemIsBlue.combine([implication]);
 console.log(combined.toString());
+
+let itemIsNotCube = new RelationInstance(item, is.inverse(), cube, 0.9);
+let combined2 = itemIsNotCube.combine([implication]);
+console.log(combined2.toString());

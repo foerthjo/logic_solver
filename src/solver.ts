@@ -1,6 +1,16 @@
-// TODO instead of probability, work with confidence
-// a probability of 0 means to be certain that a statement is not true
-// in these calculations, a confidence of 0 means that we have no clue
+/*
+TODO
+
+add source of information to statements
+a source can be:
+	"stated on wikipedia"
+	"scraped from the website ..."
+	"the user said that"
+	in the case of deduced statements, the source may be a list, and it should be marked that the statement is not explicitly stated, but implied.
+
+add timestamp to statements when they were stated
+	when feeding statements to an LLM, add how old the statement is
+ */
 
 function combine(s1:Statement, s2:Statement) : Statement {
 	if (!s1) return;
@@ -8,15 +18,23 @@ function combine(s1:Statement, s2:Statement) : Statement {
 	if (s2 instanceof Implication) [s1, s2] = [s2, s1];
 
 	if (s1 instanceof Implication && s2 instanceof RelationInstance) {
-		if (s1.r1target == s2.target && s1.r1 == s2.relation) {
-			return new RelationInstance(s2.subject, s1.r2, s1.r2target, s1.probability * s2.probability);
+		let implication: Implication = s1;
+		let relationInstance: RelationInstance = s2;
+		
+		// a(x) => b(x) and a(x): add b(x)
+		if (implication.target1 == relationInstance.target && implication.relation1.equals(relationInstance.relation)) {
+			return new RelationInstance(relationInstance.subject, implication.relation2, implication.target2, implication.confidence * relationInstance.confidence);
 		}
-		// TODO reverse direction!
+
+		// a(x) => b(x) and not b(x): add not a(x)
+		if (implication.target2 == relationInstance.target && implication.relation2.equals(relationInstance.relation.inverse())) {
+			return new RelationInstance(relationInstance.subject, implication.relation1.inverse(), implication.target1, relationInstance.confidence * implication.confidence);
+		}
 	}
 
 	if (s1 instanceof RelationInstance && s2 instanceof RelationInstance) {
 		if (s1.relation == s2.relation) {
-			return new RelationInstance(s1.subject, s1.relation, s2.target, s1.probability * s2.probability);
+			return new RelationInstance(s1.subject, s1.relation, s2.target, s1.confidence * s2.confidence);
 		}
 	}
 
@@ -33,10 +51,12 @@ export class Item {
 }
 
 export class Statement {
-	probability:number;
-	constructor(probability:number) {
-		this.probability = probability;
-	}
+	/**
+	 * 
+	 * @param confidence - How confident the solver should be about the truth of the statement in [0; 1]
+	 */
+	constructor(public confidence:number) {}
+
 	/**
 	 * Combines this statement with a list of statements.
 	 * @param statements statements to combine with.
@@ -55,53 +75,40 @@ export class Statement {
 }
 
 export class Relation {
-	positive:string;
-	negative:string;
-	transitive:number;
-	constructor(positive:string, negative:string, transitive:number) {
-		this.positive = positive;
-		this.negative = negative;
-		this.transitive = transitive;
-	}
+	/**
+	 * 
+	 * @param positive - positive phrase of the relation
+	 * @param negative - negative phrase of the relation
+	 * @param transitivity - if A is B and B is C, how likely is A also C? (in [0; 1])
+	 */
+	constructor(public positive: string, public negative: string, public transitivity: number) {}
+
 	inverse() {
-		return new Relation(this.negative, this.positive, this.transitive);
+		return new Relation(this.negative, this.positive, this.transitivity);
+	}
+
+	equals(other: Relation) {
+		if (!(other instanceof Relation)) return false;
+		return this.positive == other.positive && this.negative == other.negative && this.transitivity == other.transitivity;
 	}
 }
 
 export class RelationInstance extends Statement {
-	subject:Item;
-	target:Item;
-	relation:Relation;
-	constructor(item1:Item, relation:Relation, item2:Item, probability:number=1) {
-		super(probability);
-		this.subject = item1;
-		this.target = item2;
-		this.relation = relation;
+	constructor(public subject: Item, public relation: Relation, public target: Item, confidence: number = 1) {
+		super(confidence);
 	}
+
 	toString() {
-		if (this.probability > .5) {
-			return `${this.subject.name} ${this.relation.positive} ${this.target.name} (${(this.probability * 100).toFixed(2)}%)`;
-		}
-		return `${this.subject.name} ${this.relation.negative} ${this.target.name} (${(this.probability * 100).toFixed(2)}%)`;
+		return `${this.subject.name} ${this.relation.positive} ${this.target.name} (${(this.confidence * 100).toFixed(2)}%)`;
 	}
 }
 
 export class Implication extends Statement {
-	r1:Relation;
-	r1target:Item;
-	r2:Relation;
-	r2target:Item;
-	constructor(relation1:Relation, item1:Item, relation2:Relation, item2:Item, probability:number) {
-		super(probability);
-		this.r1 = relation1;
-		this.r2 = relation2;
-		this.r1target = item1;
-		this.r2target = item2;
+	constructor(public relation1: Relation, public target1: Item, public relation2: Relation, public target2: Item, confidence: number) {
+		super(confidence);
 	}
+
 	toString() {
-		if (this.probability > .5) {
-			return `if x ${this.r1.positive} ${this.r1target.name} then x ${this.r2.positive} ${this.r2target.name} (${(this.probability * 100).toFixed(2)}%)`;
-		}
-		return `if x ${this.r1.positive} ${this.r1target.name} then x ${this.r2.negative} ${this.r2target.name} (${(this.probability * 100).toFixed(2)}%)`;
+		return `if x ${this.relation1.positive} ${this.target1.name} then x ${this.relation2.positive} ${this.target2.name} (${(this.confidence * 100).toFixed(2)}%)`;
 	}
 }
